@@ -1,0 +1,207 @@
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+
+    class Solution
+    {
+        private static string _input;
+        public static void Main(string[] args)
+        {
+            int n = Convert.ToInt32(Console.ReadLine());
+            _input = Console.ReadLine();
+            CircularPalindromes();
+        }
+
+        static void LookForPalindromesMulti(List<Model> palindromes)
+        {
+            var palindromes2 = new List<Model>();
+            var palindromeIndex = 0;
+            var palindrome = palindromes.FirstOrDefault();
+            var index = 0;
+            while (index < _input.Length)
+            {
+                if (palindrome != null && palindrome.IndexInside(index))
+                {
+                    if (palindrome.End < index) break;
+                    ExpandPalindrome(palindromes2, palindrome.Start, palindrome.End);
+                    index = palindrome.End;
+                    palindromeIndex++;
+                    if (palindromeIndex < palindromes.Count) palindrome = palindromes[palindromeIndex];
+                    else
+                    {
+                        palindrome = palindromes.SingleOrDefault(p => p.End < p.Start);
+                    }
+
+                    continue;
+                }
+                ExpandPalindrome(palindromes2, index, index + 1);
+                index++;
+            }
+            palindromes.AddRange(palindromes2);
+        }
+
+        static void ShowMaximumPalindromes(List<Model> palindromes)
+        {
+            var result = new int[_input.Length];
+            palindromes = palindromes.OrderByDescending(p => p.Length).ToList();
+            for (int i = 0; i < _input.Length; i++)
+            {
+                var maxLength = 1;
+
+                for (int j = 0; j < palindromes.Count; j++)
+                {
+                    if (maxLength >= palindromes[j].Length) break;
+                    maxLength = Math.Max(maxLength, palindromes[j].CalcLength(i));
+                }
+                result[i] = maxLength;
+            }
+
+            Console.WriteLine(string.Join("\n", result));
+        }
+        static void ExpandPalindrome(List<Model> palindromes, int start, int end)
+        {
+            Model model;
+            model = null;
+            while (Model.CalcLength(start, end) + 2 <= _input.Length)
+            {
+                start = start - 1;
+                if (start < 0) start += _input.Length;
+                end = end + 1;
+                if (end > _input.Length) end -= _input.Length;
+                
+                if (_input[start] != _input[end - 1]) break;
+                
+                if (model == null)
+                {
+                
+                    model = new Model();
+                    model.Step = 2;
+                    palindromes.Add(model);
+                }
+
+                model.Start = start;
+                model.End = end;
+            }
+        }
+
+        static void CircularPalindromes()
+        {
+            List<Model> palindromes;
+            palindromes = new List<Model>();
+            LookForPalindromesSingle(palindromes);
+            if (palindromes.Any(p => p.Length == _input.Length))
+            {
+                for (int i = 0; i < _input.Length; i++) Console.WriteLine(_input.Length);
+                return;
+            }
+            LookForPalindromesMulti(palindromes);
+            ShowMaximumPalindromes(palindromes);
+        }
+
+
+        static void LookForPalindromesSingle(List<Model> palindromes)
+        {
+            Model model;
+            
+            model = new Model();
+            model.Start = 0;
+            model.End = 1;
+            model.Step = 1;
+            for (int i = 1; i < _input.Length; i++)
+            {
+                if (_input[i] == _input[i - 1]) model.End++;
+                else
+                {
+                    if (model.Length > 1)
+                    {
+                        palindromes.Add(model);
+                        model = new Model();
+                    }
+                    
+                    model.Start = i;
+                    model.End = i + 1;
+                    model.Step = 1;
+                }
+            }
+            
+            if (_input[0] == _input[model.End - 1] && model.Length != _input.Length)
+            {
+                if (palindromes.Any(p => p.Start == 0))
+                { 
+                    palindromes[0].Start = model.Start;
+                }
+                else
+                {
+                    model.End = 0;
+                    palindromes.Add(model);
+                }
+            }
+            else
+            {
+                if (model.Length > 1)
+                {
+                    palindromes.Add(model);
+                }
+            }
+        }
+
+        
+        class Model
+        {
+            public int Start;
+            public int End;
+            public int Step;
+
+            
+            public int Length
+            {
+                get
+                {
+                    return CalcLength(Start, End);
+                }
+            }
+
+            
+            public static int CalcLength(int start, int end)
+            {
+                if (end > start) return end - start;
+                return (end + _input.Length - start);
+            }
+
+            
+            public bool IndexInside(int index)
+            {
+                if (End > Start) return (index >= Start && index < End);
+                return (index < End || index >= Start);
+            }
+
+
+            public int CalcLength(int rotationIndex)
+            {
+
+                int charsBroken;
+
+
+                if (!IndexInside(rotationIndex)) return Length;
+
+
+                if (End > Start)
+                {
+                    charsBroken = Math.Min(End - rotationIndex, rotationIndex - Start);
+                }
+                else
+                {
+                    if (rotationIndex < Start) rotationIndex += _input.Length;
+                    charsBroken = Math.Min(End + _input.Length - rotationIndex, rotationIndex - Start);
+                }
+
+             
+                return Length - Step * charsBroken;
+            }
+            public override string ToString()
+            {
+                if (End > Start) return _input.Substring(Start, Length);
+                return _input.Substring(Start) + _input.Substring(0, End);
+            }
+        }
+    }
